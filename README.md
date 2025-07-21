@@ -5,7 +5,7 @@ A classic **Tetris** game playable directly in your terminal, built with **Pytho
 ---
 
 ## 🚀 Features
-
+- Draws a grid given a width and height
 
 ---
 
