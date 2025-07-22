@@ -2,7 +2,7 @@ import random
 import time
 import os
 from rich.console import Console
-from rich.style import Style
+import keyboard
 import pyfiglet
 
 console = Console()
@@ -149,20 +149,35 @@ class shape:
                 self.dead = True
             return False
 
+    def move(self,dx,dy):
+        if not self.check_collision(dx,dy):
+            self.clear_shape()
+            self.x += dx
+            self.y += dy
+            self.draw_shape()
+
     def update(self):
         self.clear_shape()
-        if self.gravity():
-            self.draw_shape()
-        else:
-            self.draw_shape()
+        if frame % 2 == 0:
+            self.gravity()
+        self.draw_shape()
+        if not self.static:
+            if keyboard.is_pressed('right'):
+                self.move(1, 0)
+            if keyboard.is_pressed('left'):
+                self.move(-1, 0)
+            if keyboard.is_pressed('down'):
+                self.move(0, 1)
 
 # Main loop
 blocks = [shape()]
 draw_grid(grid, colour_grid)
 
 run = True
+frame = 0
 while run:
-    time.sleep(0.5)
+    time.sleep(0.25)
+    frame += 1
     for block in blocks:
         block.update()
 
