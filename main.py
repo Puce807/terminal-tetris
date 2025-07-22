@@ -36,6 +36,7 @@ def print_ascii(text):
     ascii_text = pyfiglet.figlet_format(text, font="big")
     print(ascii_text)
 
+
 WIDTH = 11
 HEIGHT = 12
 grid = create_grid(WIDTH, HEIGHT)
@@ -50,88 +51,91 @@ colours = [
     "bright_blue",
 ]
 
+SHAPES = {
+    "I": [  # Line
+        [(0, 0), (1, 0), (2, 0), (3, 0)],
+    ] * 4,
+
+    "O": [  # Square
+        [(0, 0), (1, 0), (0, -1), (1, -1)],
+    ] * 4,
+
+    "T": [  # Small T
+        [(1, 0), (0, 1), (1, 1), (2, 1)],
+    ] * 4,
+}
+
+
+def has_spawn_space(shape_name, rotation, x_offset):
+    shape_blocks = SHAPES[shape_name][rotation]
+    for dx, dy in shape_blocks:
+        gx = x_offset + dx
+        gy = 0 + dy
+        if 0 <= gx < WIDTH and 0 <= gy < HEIGHT:
+            if grid[gy][gx] == "0":
+                return False
+    return True
 
 class shape:
     def __init__(self):
-        self.type = random.randint(0,1)
-        self.color = random.randint(0,5)
-
-        self.x = random.randint(0, WIDTH)
-        self.y = 0
-
+        self.shape = random.choice(list(SHAPES.keys()))
+        self.rotation = 0
+        self.colour = random.choice(colours)
         self.static = False
         self.dead = False
+        self.y = 0
 
-        # Exit Bounds
-        if self.type == 0:
-            if self.x > WIDTH-4:
-                self.x = WIDTH-4
-        if self.type == 1:
-            if self.x > WIDTH-2:
-                self.x = WIDTH-2
+        # Get shape width
+        shape_blocks = SHAPES[self.shape][self.rotation]
+        xs = [x for x, y in shape_blocks]
+        min_x, max_x = min(xs), max(xs)
+        shape_width = max_x - min_x + 1
 
-    def draw_shape(self, x, y):
-        if self.type == 0:
-            grid[y][x : x + 4] = [("0" if self.static else "1")] * 4
-            colour_grid[y][x : x + 4] = [colours[self.color]] * 4
-        if self.type == 1:
-            grid[y][x: x + 2] = [("0" if self.static else "1")] * 2
-            grid[y-1][x: x + 2] = [("0" if self.static else "1")] * 2
-            colour_grid[y][x: x + 2] = [colours[self.color]] * 2
-            colour_grid[y-1][x: x + 2] = [colours[self.color]] * 2
+        possible_positions = list(range(0, WIDTH - shape_width + 1))
+        random.shuffle(possible_positions)
 
+        global run
+        for pos in possible_positions:
+            if has_spawn_space(self.shape, self.rotation, pos):
+                self.x = pos
+            else:
+                self.x = pos
+                run = False
+                break
 
-    def clear_shape(self, x, y):
-        if self.type == 0:
-            grid[y][x: x + 4] = [" "] * 4
-        if self.type == 1:
-            grid[y][x: x + 2] = [" "] * 2
-            grid[y-1][x: x + 2] = [" "] * 2
+    def draw_shape(self):
+        val = "0" if self.static else "1"
+        for dx, dy in SHAPES[self.shape][self.rotation]:
+            gx, gy = self.x + dx, self.y + dy
+            if 0 <= gx < WIDTH and 0 <= gy < HEIGHT:
+                grid[gy][gx] = val
+                colour_grid[gy][gx] = self.colour
+
+    def clear_shape(self):
+        for dx, dy in SHAPES[self.shape][self.rotation]:
+            gx, gy = self.x + dx, self.y + dy
+            if 0 <= gx < WIDTH and 0 <= gy < HEIGHT:
+                grid[gy][gx] = " "
+
+        return True
+
+    def check_collision(self, dx=0, dy=0):
+        for bx, by in SHAPES[self.shape][self.rotation]:
+            nx = self.x + bx + dx
+            ny = self.y + by + dy
+            if nx < 0 or nx >= WIDTH or ny < 0 or ny >= HEIGHT:
+                return True
+            if grid[ny][nx] == "0":
+                return True
+            if ny >= HEIGHT:
+                return False
+        return False
 
     def check_vert_collision(self):
-        if self.type == 0:
-            if self.y + 1 >= len(grid):
-                return False
-            for i in range(4):
-                if self.x + i >= len(grid[0]):
-                    return False
-                if grid[self.y + 1][self.x + i] == "0":
-                    return False
-        if self.type == 1:
-            if self.y + 1 >= len(grid):
-                return False
-            for i in range(2):
-                if self.x + i >= len(grid[0]):
-                    return False
-                if grid[self.y + 1][self.x + i] == "0":
-                    return False
-        return True
+        return not self.check_collision(dy=1)
 
     def check_hori_collision(self, direction):
-        if self.type == 0:
-            for i in range(4):
-                nx = self.x + i + direction
-                if nx < 0 or nx >= WIDTH:
-                    return False
-                if grid[self.y][nx] == "0":
-                    return False
-        elif self.type == 1:
-            # Check lower row
-            for i in range(2):
-                nx = self.x + i + direction
-                if nx < 0 or nx >= WIDTH:
-                    return False
-                if grid[self.y][nx] == "0":
-                    return False
-            # Check upper row (y - 1)
-            if self.y - 1 >= 0:
-                for i in range(2):
-                    nx = self.x + i + direction
-                    if nx < 0 or nx >= WIDTH:
-                        return False
-                    if grid[self.y - 1][nx] == "0":
-                        return False
-        return True
+        return not self.check_collision(dx=direction)
 
     def gravity(self):
         if self.check_vert_collision():
@@ -139,35 +143,30 @@ class shape:
             return True
         else:
             self.static = True
-            self.draw_shape(self.x, self.y)  # Draw static blocks as '0'
+            self.draw_shape()
             if not self.dead:
                 blocks.append(shape())
                 self.dead = True
             return False
 
     def update(self):
-        self.clear_shape(self.x, self.y)  # Clear current position first
+        self.clear_shape()
         if self.gravity():
-            self.draw_shape(self.x, self.y)
+            self.draw_shape()
         else:
-            self.draw_shape(self.x, self.y)  # Draw at final position (static)
+            self.draw_shape()
 
-
+# Main loop
 blocks = [shape()]
-
-draw_grid(grid,colour_grid)
+draw_grid(grid, colour_grid)
 
 run = True
 while run:
     time.sleep(0.5)
     for block in blocks:
-        if not block.static:
-            if not block.check_hori_collision(0):
-                run = False
-                break
         block.update()
-    move_cursor_up(lines=len(grid) + 2)
 
+    move_cursor_up(lines=len(grid) + 2)
     draw_grid(grid, colour_grid)
 
 print_ascii("Game Over!")
