@@ -66,5 +66,7 @@ Enjoy playing Tetris!
 ```bash
 terminal_tetris/
 ├── main.py           # Main game loop and logic
-├── requirements.txt  # File containing all requirements
+├── config.py         # Global constants, configuration settings
+├── utils.py          # Helper functions 
+├── requirements.txt  # Lists all external python library required 
 └── README.md         # This file

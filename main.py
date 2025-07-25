@@ -1,147 +1,23 @@
 import random
 import time
 import os
-from rich.console import Console
 import keyboard
-import pyfiglet
 
-console = Console()
-os.system('')  # Enable ANSI escape codes on Windows
+import config
+import utils
 
-def create_grid(width, height):
-    c_grid = []
-    for _ in range(height):
-        row = [" "] * width
-        c_grid.append(row)
-    return c_grid
+os.system('')
 
-def draw_grid(grid, colour_grid, scale=2):
-    width = len(grid[0])
-    height = len(grid)
+WIDTH = config.WIDTH
+HEIGHT = config.HEIGHT
+grid = utils.create_grid(WIDTH, HEIGHT)
+colour_grid = utils.create_grid(WIDTH, HEIGHT)
 
-    def stretch(cell, x, y):
-        colour = colour_grid[y][x]
-        return (f"[{colour}]█[/{colour}]" * scale) if cell != " " else (" " * scale)
+colours = config.COLOURS
 
-    # Build and return the grid lines
-    lines = [f"┌{'─' * width * scale}┐"]
-    for y, row in enumerate(grid):
-        stretched_row = ''.join(stretch(cell, x, y) for x, cell in enumerate(row))
-        lines.append(f"│{stretched_row}│")
-    lines.append(f"└{'─' * width * scale}┘")
-    return lines
+SHAPES = config.SHAPES
 
-def print_grid_with_side_text(grid_lines, side_text_lines=None):
-    height = len(grid_lines)
-    for i in range(height):
-        grid_line = grid_lines[i]
-        side_line = side_text_lines[i] if side_text_lines and i < len(side_text_lines) else ""
-        console.print(f"{grid_line} {side_line}")
-
-def move_cursor_up(lines=1):
-    print(f"\033[{lines}A", end='')
-
-def print_ascii(text):
-    ascii_text = pyfiglet.figlet_format(text, font="big")
-    print(ascii_text)
-
-
-WIDTH = 12
-HEIGHT = 12
-grid = create_grid(WIDTH, HEIGHT)
-colour_grid = create_grid(WIDTH, HEIGHT)
-full_line = ["0" for i in range(WIDTH)]
-
-colours = [
-    "red",
-    "bright_cyan",
-    "bright_green",
-    "yellow",
-    "bright_magenta",
-    "bright_blue",
-    "blue1",
-    "purple"
-]
-
-SHAPES = {
-    "I": [
-        [(-2, 0), (-1, 0), (0, 0), (1, 0)],  # Horizontal
-        [(0, -1), (0, 0), (0, 1), (0, 2)],   # Vertical
-        [(-2, 1), (-1, 1), (0, 1), (1, 1)],  # Horizontal (offset)
-        [(1, -1), (1, 0), (1, 1), (1, 2)]    # Vertical (offset)
-    ],
-    "O": [  # Square (only 1 rotation needed)
-        [(0, 0), (1, 0), (0, 1), (1, 1)] * 4
-    ],
-    "T": [
-        [(0, 0), (-1, 0), (1, 0), (0, 1)],   # Up
-        [(0, 0), (0, -1), (0, 1), (1, 0)],   # Right
-        [(0, 0), (-1, 0), (1, 0), (0, -1)],  # Down
-        [(0, 0), (0, -1), (0, 1), (-1, 0)]   # Left
-    ],
-    "S": [
-        [(0, 0), (1, 0), (0, 1), (-1, 1)],   # Horizontal
-        [(0, 0), (0, -1), (1, 0), (1, 1)],   # Vertical
-        [(0, 0), (1, 0), (0, 1), (-1, 1)],   # Horizontal (repeated)
-        [(0, 0), (0, -1), (1, 0), (1, 1)]    # Vertical (repeated)
-    ],
-    "Z": [
-        [(0, 0), (-1, 0), (0, 1), (1, 1)],   # Horizontal
-        [(0, 0), (0, -1), (-1, 0), (-1, 1)], # Vertical
-        [(0, 0), (-1, 0), (0, 1), (1, 1)],   # Horizontal (repeated)
-        [(0, 0), (0, -1), (-1, 0), (-1, 1)]  # Vertical (repeated)
-    ],
-    "J": [
-        [(0, 0), (-1, 0), (1, 0), (1, 1)],   # Up
-        [(0, 0), (0, -1), (0, 1), (1, -1)],  # Right
-        [(0, 0), (-1, 0), (1, 0), (-1, -1)], # Down
-        [(0, 0), (0, -1), (0, 1), (-1, 1)]   # Left
-    ],
-    "L": [
-        [(0, 0), (-1, 0), (1, 0), (-1, 1)],  # Up
-        [(0, 0), (0, -1), (0, 1), (1, 1)],   # Right
-        [(0, 0), (-1, 0), (1, 0), (1, -1)],  # Down
-        [(0, 0), (0, -1), (0, 1), (-1, -1)]  # Left
-    ]
-}
-
-debug = 0
-
-def clear_phantom():
-    if grid[0][0] == "0":
-        grid[0][0] = " "
-    if grid[0][1] == "0":
-        grid[0][1] = " "
-    if grid[1][0] == "0":
-        grid[1][0] = " "
-    if grid[1][1] == "0":
-        grid[1][1] = " "
-    if grid[0][2] == "0":
-        grid[0][2] = " "
-
-def handle_clear():
-    cleared = False
-    for y in range(HEIGHT - 1, -1, -1):  # Start from bottom row
-        if grid[y] == full_line:
-            # Clear the row
-            del grid[y]
-            grid.insert(0, [" " for _ in range(WIDTH)])
-            del colour_grid[y]
-            colour_grid.insert(0, ["white" for _ in range(WIDTH)])
-            cleared = True
-    return cleared
-
-
-def get_block_positions(shape_name, rotation, position):
-    block_data = SHAPES[shape_name][rotation]
-    x, y = position
-    block_positions = []
-    for data in block_data:
-        dx, dy = data
-        grid_x = x + dx
-        grid_y = y + dy
-        block_positions.append((grid_x, grid_y))
-    return block_positions
+DEBUG_MODE = config.DEBUG_MODE
 
 class shape:
     def __init__(self):
@@ -161,7 +37,7 @@ class shape:
         self.x = random.randint(1, WIDTH - shape_width)
         self.y = 0
 
-        block_positions = get_block_positions(self.shape, self.rotation, (self.x, self.y))
+        block_positions = utils.get_block_positions(self.shape, self.rotation, (self.x, self.y))
         global run
         for data in block_positions:
             x, y = data
@@ -170,7 +46,7 @@ class shape:
                 break
 
     def draw(self):
-        if debug == 1:
+        if DEBUG_MODE == 1:
             print("Function: draw")
         val = "0" if self.static else "1"
         for dx, dy in SHAPES[self.shape][self.rotation]:
@@ -188,7 +64,7 @@ class shape:
                 colour_grid[gy][gx] = self.colour
 
     def clear_shape(self):
-        if debug == 1:
+        if DEBUG_MODE == 1:
             print("Function: clear_shape")
         for dx, dy in SHAPES[self.shape][self.rotation]:
             gx, gy = self.x + dx, self.y + dy
@@ -198,7 +74,7 @@ class shape:
         return True
 
     def check_collision(self, dx=0, dy=0, test_rotation=None):
-        if debug == 1:
+        if DEBUG_MODE == 1:
             print("Function: check_collision")
         shape_blocks = SHAPES[self.shape][test_rotation if test_rotation is not None else self.rotation]
         for x_offset, y_offset in shape_blocks:
@@ -222,7 +98,7 @@ class shape:
         return not self.check_collision(dx=direction)
 
     def gravity(self):
-        if debug == 1:
+        if DEBUG_MODE == 1:
             print("Function: gravity")
         if self.check_vert_collision():
             self.y += 1
@@ -238,7 +114,7 @@ class shape:
 
 
     def rotate(self):
-        if debug == 1:
+        if DEBUG_MODE == 1:
             print("Function: rotate")
         next_rotation = (self.rotation + 1) % len(SHAPES[self.shape])
         if not self.check_collision(test_rotation=next_rotation):
@@ -247,7 +123,7 @@ class shape:
             self.draw()
 
     def move(self,dx,dy):
-        if debug == 1:
+        if DEBUG_MODE == 1:
             print("Function: move")
         if not self.check_collision(dx,dy):
             self.clear_shape()
@@ -256,7 +132,7 @@ class shape:
             self.draw()
 
     def update(self):
-        if debug == 1:
+        if DEBUG_MODE == 1:
             print("Function: update")
         self.clear_shape()
         if frame % 2 == 0:
@@ -286,8 +162,8 @@ side_text = [
     ""
 ]
 blocks = [shape()]
-grid_lines = draw_grid(grid, colour_grid, scale=2)
-print_grid_with_side_text(grid_lines, side_text)
+grid_lines = utils.draw_grid(grid, colour_grid, scale=2)
+utils.print_grid_with_side_text(grid_lines, side_text)
 
 run = True
 frame = 0
@@ -300,17 +176,17 @@ while run:
             blocks.append(shape())
         else:
             active_block.draw()
-    clear_phantom()
-    handle_clear()
+    grid = utils.clear_phantom(grid)
+    utils.handle_clear(grid, colour_grid)
 
-    if debug == 2:
+    if DEBUG_MODE == 2:
         side_text = ["".join(row) for row in grid]
 
-    move_cursor_up(lines=len(grid) + 2)
-    grid_lines = draw_grid(grid, colour_grid, scale=2)
-    print_grid_with_side_text(grid_lines, side_text)
+    utils.move_cursor_up(lines=len(grid) + 2)
+    grid_lines = utils.draw_grid(grid, colour_grid, scale=2)
+    utils.print_grid_with_side_text(grid_lines, side_text)
 
     if keyboard.is_pressed('q'):
         run = False
 
-print_ascii("Game Over!")
+utils.print_ascii("Game Over!")
