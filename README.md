@@ -21,7 +21,7 @@ Uses the rich library for vibrant, colourful shapes and grid.
 Real-time piece dropping with speed control and collision detection.
 
 - 📦 Lightweight & Portable
-Just one Python file with minimal dependencies — easy to run anywhere.
+Just 3 Python files with minimal dependencies — easy to run anywhere.
 
 ---
 
@@ -75,6 +75,6 @@ terminal_tetris/
 └── README.md         # This file
 ```
 
-<div style="text-align: center;">
+<p align="center">
   <img src="ASSETS/image.png" alt="Image showing terminal tetris run in CMD">
-</div>
+</p>
