@@ -1,7 +1,14 @@
 import pyfiglet
+import math
+import time
+from rich.text import Text
+
 import config
 
 console = config.CONSOLE
+
+WIDTH = config.WIDTH
+HEIGHT = config.HEIGHT
 
 def clear_phantom(grid):
     if grid[0][0] == "0":
@@ -39,12 +46,12 @@ def draw_grid(grid, colour_grid, scale=2):
     lines.append(f"└{'─' * width * scale}┘")
     return lines
 
-def print_grid_with_side_text(grid_lines, side_text_lines=None):
-    height = len(grid_lines)
-    for i in range(height):
+def print_grid_with_side_text(grid_lines, side_text_lines=None, side_style=None):
+    for i in range(len(grid_lines)):
         grid_line = grid_lines[i]
-        side_line = side_text_lines[i] if side_text_lines and i < len(side_text_lines) else ""
-        console.print(f"{grid_line} {side_line}")
+        style = side_style[i] if side_style and i < len(side_style) else ""
+        side_line = Text(side_text_lines[i] if side_text_lines and i < len(side_text_lines) else "", style=style)
+        console.print(f"{''.join(grid_line)} {side_line}")
 
 def move_cursor_up(lines=1):
     print(f"\033[{lines}A", end='')
@@ -53,8 +60,6 @@ def print_ascii(text):
     ascii_text = pyfiglet.figlet_format(text, font="big")
     print(ascii_text)
 
-WIDTH = config.WIDTH
-HEIGHT = config.HEIGHT
 def handle_clear(grid, colour_grid):
     full_line = ["0" for i in range(WIDTH)]
     cleared = False
@@ -68,7 +73,6 @@ def handle_clear(grid, colour_grid):
             cleared = True
     return cleared
 
-
 def get_block_positions(shape_name, rotation, position):
     block_data = config.SHAPES[shape_name][rotation]
     x, y = position
@@ -79,3 +83,25 @@ def get_block_positions(shape_name, rotation, position):
         grid_y = y + dy
         block_positions.append((grid_x, grid_y))
     return block_positions
+
+def handle_level(line_clears):
+    level = math.floor(line_clears/5)
+    return level
+
+def get_mini_display(shape_name, rotation=0):
+    coords = config.SHAPES[shape_name][rotation]
+
+    min_x = min(x for x, y in coords)
+    min_y = min(y for x, y in coords)
+
+    grid = [[" " for _ in range(16)] for _ in range(2)]
+
+    for x, y in coords:
+        new_x = (x - min_x + 2) * 2
+        new_y = y - min_y
+        if 0 <= new_x < 15 and 0 <= new_y < 2:
+            grid[new_y][new_x] = "█"
+            grid[new_y][new_x + 1] = "█"
+
+    return ["".join(row) for row in grid]
+

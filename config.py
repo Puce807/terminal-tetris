@@ -1,11 +1,15 @@
+# Only change this file if you know what you are doing!
+
 from rich.console import Console
 
 CONSOLE = Console()
 
 WIDTH = 12
-HEIGHT = 12
+HEIGHT = 15
 
 DEBUG_MODE = 0
+
+CLEAR_POINTS = 40
 
 COLOURS = [
     "red",

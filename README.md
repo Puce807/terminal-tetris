@@ -55,6 +55,7 @@ python main.py
   - **Right Arrow (`→`)** – Move the current piece right
   - **Down Arrow (`↓`)** – Move the current piece down faster
   - **Up Arrow (`↑`)** – Rotate the current piece
+  - **Space (`␣`)** - Instantly drop the piece
   - **Q** – Quit the game
 - **Objective:** Arrange the falling pieces to complete horizontal lines. Completed lines will clear, giving you points and making room for more pieces. The game ends if the stack of pieces reaches the top of the grid.
 
@@ -70,3 +71,7 @@ terminal_tetris/
 ├── utils.py          # Helper functions 
 ├── requirements.txt  # Lists all external python library required 
 └── README.md         # This file
+
+<div style="text-align: center;">
+  <img src="ASSETS/image.png" alt="Image showing terminal tetris run in CMD">
+</div>

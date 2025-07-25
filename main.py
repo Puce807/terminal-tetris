@@ -19,9 +19,18 @@ SHAPES = config.SHAPES
 
 DEBUG_MODE = config.DEBUG_MODE
 
+score = 0
+line_clears = 0
+level = 0
+hard_drop = 1
+base_points = config.CLEAR_POINTS
+
+next_shape = random.choice(list(SHAPES.keys()))
 class shape:
     def __init__(self):
-        self.shape = random.choice(list(SHAPES.keys()))
+        global next_shape
+        self.shape = next_shape
+        next_shape = random.choice(list(SHAPES.keys()))
         self.rotation = 0
         self.rotation_frame = 0
         self.colour = random.choice(colours)
@@ -63,9 +72,9 @@ class shape:
                 grid[gy][gx] = "0"
                 colour_grid[gy][gx] = self.colour
 
-    def clear_shape(self):
+    def clear(self):
         if DEBUG_MODE == 1:
-            print("Function: clear_shape")
+            print("Function: clear")
         for dx, dy in SHAPES[self.shape][self.rotation]:
             gx, gy = self.x + dx, self.y + dy
             if 0 <= gx < WIDTH and 0 <= gy < HEIGHT:
@@ -112,13 +121,12 @@ class shape:
             if self.y == 0:
                 run = False
 
-
     def rotate(self):
         if DEBUG_MODE == 1:
             print("Function: rotate")
         next_rotation = (self.rotation + 1) % len(SHAPES[self.shape])
         if not self.check_collision(test_rotation=next_rotation):
-            self.clear_shape()
+            self.clear()
             self.rotation = next_rotation
             self.draw()
 
@@ -126,15 +134,26 @@ class shape:
         if DEBUG_MODE == 1:
             print("Function: move")
         if not self.check_collision(dx,dy):
-            self.clear_shape()
+            self.clear()
             self.x += dx
             self.y += dy
             self.draw()
 
+    def hard_drop(self):
+        global hard_drop
+        self.clear()
+        while not self.static and not self.check_collision(dy=1):
+            self.y += 1
+        hard_drop = 1.5
+        self.draw()
+        self.static = True
+        self.cement()
+        return "static"
+
     def update(self):
         if DEBUG_MODE == 1:
             print("Function: update")
-        self.clear_shape()
+        self.clear()
         if frame % 2 == 0:
             if self.gravity() == "static":
                 return "static"
@@ -150,21 +169,24 @@ class shape:
                 if frame > self.rotation_frame:
                     self.rotate()
                     self.rotation_frame = frame + 1
+            if keyboard.is_pressed('space'):
+                if self.hard_drop() == "static":
+                    return "static"
 
-# Main loop
 side_text = [
     "",
+    "--- Terminal Tetris --- ",
+    "" ]
+side_style = [
     "",
-    "",
-    "",
-    "",
-    "",
-    ""
-]
+    "b",
+    "" ]
+
 blocks = [shape()]
 grid_lines = utils.draw_grid(grid, colour_grid, scale=2)
-utils.print_grid_with_side_text(grid_lines, side_text)
+utils.print_grid_with_side_text(grid_lines, side_text, side_style)
 
+# Main loop
 run = True
 frame = 0
 while run:
@@ -174,19 +196,46 @@ while run:
     if not active_block.static:
         if active_block.update() == "static":
             blocks.append(shape())
+            hard_drop = 1
         else:
             active_block.draw()
     grid = utils.clear_phantom(grid)
-    utils.handle_clear(grid, colour_grid)
+    if utils.handle_clear(grid, colour_grid):
+        line_clears += 1
+        score += base_points * (level + 1) * hard_drop
+
+    level = utils.handle_level(line_clears)
+
+    side_text = [
+        "",
+        "--- Terminal Tetris --- ",
+        f"Score: {score}",
+        f"Level: {level}",
+        f"Clears: {line_clears}",
+        "",
+        "←→ Move Left/Right",
+        "↓ Move Down Faster",
+        "↑ Rotate",
+        "␣ Hard Fall"
+        ]
+    for i in range(HEIGHT - len(side_text)):
+        side_text.append("")
+
+    mini_shape = utils.get_mini_display(next_shape)
+    start_line = HEIGHT - 2
+    side_text[start_line - 2] = f"Next Shape: {next_shape if DEBUG_MODE else ' '}"
+    for i, row in enumerate(mini_shape):
+        side_text[start_line + i] = f"    {row}    "
 
     if DEBUG_MODE == 2:
         side_text = ["".join(row) for row in grid]
 
     utils.move_cursor_up(lines=len(grid) + 2)
     grid_lines = utils.draw_grid(grid, colour_grid, scale=2)
-    utils.print_grid_with_side_text(grid_lines, side_text)
+    utils.print_grid_with_side_text(grid_lines, side_text, side_style)
 
     if keyboard.is_pressed('q'):
         run = False
 
 utils.print_ascii("Game Over!")
+
