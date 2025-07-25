@@ -32,7 +32,7 @@ Just one Python file with minimal dependencies — easy to run anywhere.
 1. Clone this repository:
 ```bash
 git clone https://github.com/Puce807/terminal-tetris
-cd <WHEREVER YOU HAVE YOUR FOLDER>
+cd terminal_tetris
 ```
 
 2. Install required packages: _rich, pyfiglet, keyboard_
@@ -70,7 +70,10 @@ terminal_tetris/
 ├── config.py         # Global constants, configuration settings
 ├── utils.py          # Helper functions 
 ├── requirements.txt  # Lists all external python library required 
+├── ASSETS            # Stores image used in `README.md`
+│   └── image.png 
 └── README.md         # This file
+```
 
 <div style="text-align: center;">
   <img src="ASSETS/image.png" alt="Image showing terminal tetris run in CMD">
