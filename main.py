@@ -23,11 +23,20 @@ def draw_grid(grid, colour_grid, scale=2):
         colour = colour_grid[y][x]
         return (f"[{colour}]█[/{colour}]" * scale) if cell != " " else (" " * scale)
 
-    print(f"┌{'─' * width * scale}┐")
+    # Build and return the grid lines
+    lines = [f"┌{'─' * width * scale}┐"]
     for y, row in enumerate(grid):
         stretched_row = ''.join(stretch(cell, x, y) for x, cell in enumerate(row))
-        console.print(f"│{stretched_row}│")
-    print(f"└{'─' * width * scale}┘")
+        lines.append(f"│{stretched_row}│")
+    lines.append(f"└{'─' * width * scale}┘")
+    return lines
+
+def print_grid_with_side_text(grid_lines, side_text_lines=None):
+    height = len(grid_lines)
+    for i in range(height):
+        grid_line = grid_lines[i]
+        side_line = side_text_lines[i] if side_text_lines and i < len(side_text_lines) else ""
+        console.print(f"{grid_line} {side_line}")
 
 def move_cursor_up(lines=1):
     print(f"\033[{lines}A", end='')
@@ -37,11 +46,11 @@ def print_ascii(text):
     print(ascii_text)
 
 
-WIDTH = 11
+WIDTH = 12
 HEIGHT = 12
 grid = create_grid(WIDTH, HEIGHT)
 colour_grid = create_grid(WIDTH, HEIGHT)
-full_line = [i for i in range(WIDTH)]
+full_line = ["0" for i in range(WIDTH)]
 
 colours = [
     "red",
@@ -50,6 +59,8 @@ colours = [
     "yellow",
     "bright_magenta",
     "bright_blue",
+    "blue1",
+    "purple"
 ]
 
 SHAPES = {
@@ -94,7 +105,7 @@ SHAPES = {
     ]
 }
 
-debug = False
+debug = 0
 
 def clear_phantom():
     if grid[0][0] == "0":
@@ -105,6 +116,21 @@ def clear_phantom():
         grid[1][0] = " "
     if grid[1][1] == "0":
         grid[1][1] = " "
+    if grid[0][2] == "0":
+        grid[0][2] = " "
+
+def handle_clear():
+    cleared = False
+    for y in range(HEIGHT - 1, -1, -1):  # Start from bottom row
+        if grid[y] == full_line:
+            # Clear the row
+            del grid[y]
+            grid.insert(0, [" " for _ in range(WIDTH)])
+            del colour_grid[y]
+            colour_grid.insert(0, ["white" for _ in range(WIDTH)])
+            cleared = True
+    return cleared
+
 
 def get_block_positions(shape_name, rotation, position):
     block_data = SHAPES[shape_name][rotation]
@@ -132,7 +158,7 @@ class shape:
         min_x, max_x = min(xs), max(xs)
         shape_width = max_x - min_x + 1
 
-        self.x = random.randint(0, WIDTH - shape_width)
+        self.x = random.randint(1, WIDTH - shape_width)
         self.y = 0
 
         block_positions = get_block_positions(self.shape, self.rotation, (self.x, self.y))
@@ -144,7 +170,7 @@ class shape:
                 break
 
     def draw(self):
-        if debug:
+        if debug == 1:
             print("Function: draw")
         val = "0" if self.static else "1"
         for dx, dy in SHAPES[self.shape][self.rotation]:
@@ -153,8 +179,16 @@ class shape:
                 grid[gy][gx] = val
                 colour_grid[gy][gx] = self.colour
 
+    def cement(self):
+        for dx, dy in SHAPES[self.shape][self.rotation]:
+            gx = self.x + dx
+            gy = self.y + dy
+            if 0 <= gx < WIDTH and 0 <= gy < HEIGHT:
+                grid[gy][gx] = "0"
+                colour_grid[gy][gx] = self.colour
+
     def clear_shape(self):
-        if debug:
+        if debug == 1:
             print("Function: clear_shape")
         for dx, dy in SHAPES[self.shape][self.rotation]:
             gx, gy = self.x + dx, self.y + dy
@@ -164,7 +198,7 @@ class shape:
         return True
 
     def check_collision(self, dx=0, dy=0, test_rotation=None):
-        if debug:
+        if debug == 1:
             print("Function: check_collision")
         shape_blocks = SHAPES[self.shape][test_rotation if test_rotation is not None else self.rotation]
         for x_offset, y_offset in shape_blocks:
@@ -188,7 +222,7 @@ class shape:
         return not self.check_collision(dx=direction)
 
     def gravity(self):
-        if debug:
+        if debug == 1:
             print("Function: gravity")
         if self.check_vert_collision():
             self.y += 1
@@ -196,10 +230,15 @@ class shape:
         else: # Landed
             if not self.static:
                 self.static = True
+                self.cement()
                 return "static"
+            global run
+            if self.y == 0:
+                run = False
+
 
     def rotate(self):
-        if debug:
+        if debug == 1:
             print("Function: rotate")
         next_rotation = (self.rotation + 1) % len(SHAPES[self.shape])
         if not self.check_collision(test_rotation=next_rotation):
@@ -208,7 +247,7 @@ class shape:
             self.draw()
 
     def move(self,dx,dy):
-        if debug:
+        if debug == 1:
             print("Function: move")
         if not self.check_collision(dx,dy):
             self.clear_shape()
@@ -217,7 +256,7 @@ class shape:
             self.draw()
 
     def update(self):
-        if debug:
+        if debug == 1:
             print("Function: update")
         self.clear_shape()
         if frame % 2 == 0:
@@ -237,8 +276,18 @@ class shape:
                     self.rotation_frame = frame + 1
 
 # Main loop
+side_text = [
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
+]
 blocks = [shape()]
-draw_grid(grid, colour_grid)
+grid_lines = draw_grid(grid, colour_grid, scale=2)
+print_grid_with_side_text(grid_lines, side_text)
 
 run = True
 frame = 0
@@ -251,15 +300,17 @@ while run:
             blocks.append(shape())
         else:
             active_block.draw()
-    for block in blocks:
-        if block != active_block and block.static:
-            block.draw()
     clear_phantom()
-    if debug:
-        for i in range(HEIGHT):
-            print(grid[i])
+    handle_clear()
+
+    if debug == 2:
+        side_text = ["".join(row) for row in grid]
 
     move_cursor_up(lines=len(grid) + 2)
-    draw_grid(grid, colour_grid)
+    grid_lines = draw_grid(grid, colour_grid, scale=2)
+    print_grid_with_side_text(grid_lines, side_text)
+
+    if keyboard.is_pressed('q'):
+        run = False
 
 print_ascii("Game Over!")
